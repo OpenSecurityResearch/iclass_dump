@@ -1,0 +1,54 @@
+iClass Reader Tools 
+by brad.antoniewicz@foundstone.com
+-------------------------------------------------
+
+iClass EEPROM Dumper (iclass_eeprom_dump)
+ Using method described here:
+  http://proxclone.com/pdfs/iClass_Key_Extraction.pdf
+
+ A lot of code was borrowed from here:
+  http://www.openpcd.org/git-view/iclass-security/tree/pic18-icsp/uMain.cpp
+
+ According to
+  http://www.ftdichip.com/Support/Documents/DataSheets/Cables/DS_TTL-232R_CABLES.pdf
+
+ The FTDI TTL-232R-5V-WE pin out is:
+
+                1 - Black
+                2 - Brown
+                3 - Red
+                4 - Orange
+                5 - Yellow
+                6 - Green
+
+ According to
+  http://www.openpcd.org/images/HID-iCLASS-security.pdf
+
+ The HID RW300/RW400 ICSP pin out is (on the back under the tape,
+  starting from left to right, with the sticker on the bottom):
+
+		1 - VSS
+                2 - VDD
+                3 - VPP/MCLR
+                4 - PGD
+                5 - PGC
+                6 - PGM
+
+ So our pin out will be:
+
+        FTDI COLOR -> HID PIN -> HID ICSP
+           Black   ->    1    ->    VSS
+            Red    ->    2    ->    VDD
+            N/A    ->    3    ->    VPP
+           Green   ->    4    ->    PGD
+           Orange  ->    5    ->    PGC
+           Brown   ->    6    ->    PGM
+
+ For VPP we'll use an external 9V battery, just connect
+ the VCC (+) on the battery to the VPP location when prompted
+ (helps to have a switch) and the GND (-) to VSS
+
+ This uses the FTDI-D2XX drivers. Get them from
+  http://www.ftdichip.com/Drivers/D2XX.htm
+ and follow the readme
+
