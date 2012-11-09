@@ -91,8 +91,8 @@
 // Length of the keys, Master = 8, 3DES = 16 (K1 + K2)
 #define KEY_LEN	8
 
-// Offsets (Last three removed in prod)
-#define MASTER		0
+// Offsets (important ones removed in prod)
+#define MASTER		0	
 #define TDES_K1		0
 #define TDES_K2		0
 #define LAST_CARD	444
@@ -100,6 +100,7 @@
 #define LAST_CSN2	1470
 
 #include <stdio.h>
+//#include <ftdi.h>
 #include <ftd2xx.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -111,6 +112,62 @@ void help(char *argv[]) {
 	printf("\nExample:\n");
 	printf("\t%s\n\n", argv[0]);
 }
+
+void permute(uint8_t *key, uint8_t *res) {
+        int i,x;
+        uint8_t p,mask;
+
+        for(i=0;i<KEY_LEN;i++) {
+                p=0;
+                mask=0x80>>i;
+                for(x=0;x<KEY_LEN;x++) {
+                        p>>=1;
+                        if(key[x] & mask)
+                                p|=0x80;
+                }
+                res[i] = p;
+        }
+}
+
+void permute_n(uint8_t *key, uint8_t *res) {
+        int n=3,i;
+        while(n--) {
+                permute(key, res);
+		for (i=0;i<8;i++)
+                        key[i] = res[i];
+	
+        }
+
+}
+
+void shave(uint8_t *key, uint8_t *res) {
+        int i;
+        for(i=0;i<8;i++)
+                res[i] = key[i] & 0xFE;
+}
+void shave_and_perm(uint8_t *key, uint8_t *res) {
+	int i;
+	
+	printf("\t\t");
+	for(i=0;i<KEY_LEN;i++)
+		printf("%02x",key[i]);
+	printf(" (parsed)\n");
+
+        permute_n(key,res);
+	printf("\t\t");
+        for(i=0;i<KEY_LEN;i++)
+                printf("%02x",res[i]);
+        printf(" (rev. permutated)\n");
+
+        printf("\t\t");
+        for(i=0;i<KEY_LEN;i++)
+                key[i] = res[i];
+        shave(key,res);
+        for(i=0;i<KEY_LEN;i++)
+                printf("%02x",res[i]);
+        printf(" (shaved)\n");
+}
+
 
 int tick_tx(UCHAR tick) {
         int res;
@@ -224,7 +281,7 @@ int main(int argc, char *argv[]) {
 	DWORD count;
 	FT_STATUS ftStatus;
 	
-	uint8_t eeprom_data[REGS];
+	uint8_t eeprom_data[REGS], key[8], res[8];
 	
 
 	printf("iClass EEPROM Dumper\n");
@@ -344,21 +401,22 @@ int main(int argc, char *argv[]) {
 
 	printf("Parsed Keys:\n");
 
-	printf("\tHID Master:\t");
-        for(i=0;i<KEY_LEN;i++)
-                printf("%02x",eeprom_data[i+MASTER]);
-        printf("\n");
+        printf("\tHID Master:\n");
+        for(i=0;i<KEY_LEN;i++) 
+		key[i] = eeprom_data[i+MASTER];
+	shave_and_perm(key,res);
 
-        printf("\tTDES K1:\t");
+        printf("\tTDES K1:\n");
         for(i=0;i<KEY_LEN;i++)
-                printf("%02x",eeprom_data[i+TDES_K1]);
-        printf("\n");
+                key[i] = eeprom_data[i+TDES_K1];
+	shave_and_perm(key,res);
 
-        printf("\tTDES_K2:\t");
+        printf("\tTDES K2:\n");
         for(i=0;i<KEY_LEN;i++)
-                printf("%02x",eeprom_data[i+TDES_K2]);
-        printf("\n\n");
-	
+                key[i] = eeprom_data[i+TDES_K2];
+	shave_and_perm(key,res);
+
+
 	printf("Parsed Last Read Card:\n");
         printf("\tWiegand:\t");
         for(i=0;i<4;i++)
